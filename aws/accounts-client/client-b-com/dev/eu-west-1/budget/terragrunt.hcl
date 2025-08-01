@@ -22,14 +22,10 @@ terraform {
   source = "git::https://github.com/catherinevee/finops.git//?ref=v1.0.0"
 }
 
-# Dependencies (uncomment and configure as needed)
-# dependency "iam" {
-#   config_path = "../iam"
-# }
-# 
-# dependency "sns" {
-#   config_path = "../sns"
-# }
+# Dependencies
+dependency "sns" {
+  config_path = "../sns"
+}
 
 inputs = {
   # Environment and region configuration
@@ -68,21 +64,21 @@ inputs = {
             threshold          = 80
             threshold_type     = "PERCENTAGE"
             notification_type  = "ACTUAL"
-            subscriber_email_addresses = ["devops@client-b.com"]
+            sns_topic_arn = dependency.sns.outputs.topic_arns["dev-budget-alerts"]
           },
           {
             comparison_operator = "GREATER_THAN"
             threshold          = 100
             threshold_type     = "PERCENTAGE"
             notification_type  = "ACTUAL"
-            subscriber_email_addresses = ["devops@client-b.com", "finance@client-b.com"]
+            sns_topic_arn = dependency.sns.outputs.topic_arns["dev-budget-alerts"]
           },
           {
             comparison_operator = "GREATER_THAN"
             threshold          = 120
             threshold_type     = "PERCENTAGE"
             notification_type  = "ACTUAL"
-            subscriber_email_addresses = ["devops@client-b.com", "finance@client-b.com", "management@client-b.com"]
+            sns_topic_arn = dependency.sns.outputs.topic_arns["dev-budget-alerts"]
           }
         ]
         cost_filters = {
@@ -114,14 +110,14 @@ inputs = {
             threshold          = 85
             threshold_type     = "PERCENTAGE"
             notification_type  = "ACTUAL"
-            subscriber_email_addresses = ["devops@client-b.com", "finance@client-b.com"]
+            sns_topic_arn = dependency.sns.outputs.topic_arns["dev-budget-alerts"]
           },
           {
             comparison_operator = "GREATER_THAN"
             threshold          = 100
             threshold_type     = "PERCENTAGE"
             notification_type  = "ACTUAL"
-            subscriber_email_addresses = ["devops@client-b.com", "finance@client-b.com", "management@client-b.com"]
+            sns_topic_arn = dependency.sns.outputs.topic_arns["dev-budget-alerts"]
           }
         ]
         cost_filters = {

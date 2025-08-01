@@ -35,6 +35,10 @@ dependency "sns" {
   config_path = "../sns"
 }
 
+dependency "kms" {
+  config_path = "../kms"
+}
+
 inputs = {
   # Environment and region configuration
   environment = include.account.locals.environment

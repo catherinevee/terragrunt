@@ -17,14 +17,14 @@ terraform {
   source = "../../../../modules/s3"
 }
 
-# Dependencies (uncomment and configure as needed)
-# dependency "kms" {
-#   config_path = "../kms"
-# }
-# 
-# dependency "iam" {
-#   config_path = "../iam"
-# }
+# Dependencies
+dependency "kms" {
+  config_path = "../kms"
+}
+
+dependency "iam" {
+  config_path = "../iam"
+}
 
 inputs = {
   environment = include.account.locals.environment
@@ -38,7 +38,8 @@ inputs = {
       bucket_acl = "private"
       versioning_enabled = true
       encryption_enabled = true
-      encryption_algorithm = "AES256"
+      encryption_algorithm = "aws:kms"
+      kms_key_id = dependency.kms.outputs.key_arns["dev-s3-key"]
       
       # Lifecycle configuration for development data
       lifecycle_rules = [
@@ -94,7 +95,8 @@ inputs = {
       bucket_acl = "log-delivery-write"
       versioning_enabled = true
       encryption_enabled = true
-      encryption_algorithm = "AES256"
+      encryption_algorithm = "aws:kms"
+      kms_key_id = dependency.kms.outputs.key_arns["dev-s3-key"]
       
       # Lifecycle configuration for logs
       lifecycle_rules = [

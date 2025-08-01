@@ -17,14 +17,14 @@ terraform {
   source = "../../../../modules/ec2"
 }
 
-# Dependencies (uncomment and configure as needed)
-# dependency "vpc" {
-#   config_path = "../vpc"
-# }
-# 
-# dependency "security_groups" {
-#   config_path = "../security-groups"
-# }
+# Dependencies
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+dependency "security_groups" {
+  config_path = "../security-groups"
+}
 
 inputs = {
   environment = include.account.locals.environment
@@ -38,8 +38,8 @@ inputs = {
       instance_type              = "t3.small"  # Medium instance for staging
       key_name                   = "client-b-staging-key"
       monitoring                 = true
-      vpc_security_group_ids     = ["sg-staging-web-12345678"]  # Replace with actual security group ID
-      subnet_id                  = "subnet-staging-web-12345678"  # Replace with actual subnet ID
+      vpc_security_group_ids     = [dependency.security_groups.outputs.security_group_ids["web-server-sg"]]
+      subnet_id                  = dependency.vpc.outputs.public_subnet_ids[0]
       associate_public_ip_address = true
       user_data = {
         template = "user-data.sh"
@@ -60,8 +60,8 @@ inputs = {
       instance_type              = "t3.small"  # Medium instance for staging
       key_name                   = "client-b-staging-key"
       monitoring                 = true
-      vpc_security_group_ids     = ["sg-staging-web-12345678"]  # Replace with actual security group ID
-      subnet_id                  = "subnet-staging-web-87654321"  # Replace with actual subnet ID
+      vpc_security_group_ids     = [dependency.security_groups.outputs.security_group_ids["web-server-sg"]]
+      subnet_id                  = dependency.vpc.outputs.public_subnet_ids[1]
       associate_public_ip_address = true
       user_data = {
         template = "user-data.sh"
@@ -82,8 +82,8 @@ inputs = {
       instance_type              = "t3.medium"  # Medium instance for staging
       key_name                   = "client-b-staging-key"
       monitoring                 = true
-      vpc_security_group_ids     = ["sg-staging-app-87654321"]  # Replace with actual security group ID
-      subnet_id                  = "subnet-staging-app-12345678"  # Replace with actual subnet ID
+      vpc_security_group_ids     = [dependency.security_groups.outputs.security_group_ids["app-server-sg"]]
+      subnet_id                  = dependency.vpc.outputs.private_subnet_ids[0]
       associate_public_ip_address = false
       user_data = {
         template = "user-data.sh"
@@ -104,8 +104,8 @@ inputs = {
       instance_type              = "t3.medium"  # Medium instance for staging
       key_name                   = "client-b-staging-key"
       monitoring                 = true
-      vpc_security_group_ids     = ["sg-staging-app-87654321"]  # Replace with actual security group ID
-      subnet_id                  = "subnet-staging-app-87654321"  # Replace with actual subnet ID
+      vpc_security_group_ids     = [dependency.security_groups.outputs.security_group_ids["app-server-sg"]]
+      subnet_id                  = dependency.vpc.outputs.private_subnet_ids[1]
       associate_public_ip_address = false
       user_data = {
         template = "user-data.sh"
@@ -126,8 +126,8 @@ inputs = {
       instance_type              = "t3.large"  # Large instance for staging database
       key_name                   = "client-b-staging-key"
       monitoring                 = true
-      vpc_security_group_ids     = ["sg-staging-db-11223344"]  # Replace with actual security group ID
-      subnet_id                  = "subnet-staging-db-12345678"  # Replace with actual subnet ID
+      vpc_security_group_ids     = [dependency.security_groups.outputs.security_group_ids["database-sg"]]
+      subnet_id                  = dependency.vpc.outputs.database_subnet_ids[0]
       associate_public_ip_address = false
       user_data = {
         template = "user-data.sh"
