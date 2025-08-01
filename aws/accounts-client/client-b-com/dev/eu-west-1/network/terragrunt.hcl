@@ -1,5 +1,5 @@
 # ==============================================================================
-# Network Firewall Module Configuration for Client B - Staging Environment
+# Network Firewall Module Configuration for Client B - Development Environment
 # ==============================================================================
 
 include "root" {
@@ -41,20 +41,20 @@ inputs = {
   region      = include.region.locals.region
   account_id  = include.account.locals.account_id
   client_name = include.account.locals.client_name
-  project     = "Network Firewall - Staging"
+  project     = "Network Firewall - Development"
   
-  # Network firewall specific configuration for staging environment
+  # Network firewall specific configuration for development environment
   network_firewall_config = {
     # Organization and naming
     organization_name = "ClientB"
-    environment_name  = "staging"
+    environment_name  = "development"
     project_name      = "Network Firewall"
     
     # Network Firewall configuration
     network_firewall = {
       enabled = true
-      firewall_name = "ClientBStagingNetworkFirewall"
-      firewall_policy_arn = "arn:aws:network-firewall:eu-west-1:987654321098:firewall-policy/client-b-staging-firewall-policy"
+      firewall_name = "ClientBDevNetworkFirewall"
+      firewall_policy_arn = "arn:aws:network-firewall:eu-west-1:987654321098:firewall-policy/client-b-dev-firewall-policy"
       
       # VPC configuration
       vpc_id = dependency.vpc.outputs.vpc_id
@@ -78,17 +78,17 @@ inputs = {
         stateless_fragment_default_actions = ["aws:forward_to_sfe"]
         stateful_rule_group_references = [
           {
-            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateful-rulegroup/client-b-staging-domain-list"
+            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateful-rulegroup/client-b-dev-domain-list"
             priority = 1
           },
           {
-            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateful-rulegroup/client-b-staging-suricata-rules"
+            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateful-rulegroup/client-b-dev-suricata-rules"
             priority = 2
           }
         ]
         stateless_rule_group_references = [
           {
-            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateless-rulegroup/client-b-staging-custom-rules"
+            resource_arn = "arn:aws:network-firewall:eu-west-1:987654321098:stateless-rulegroup/client-b-dev-custom-rules"
             priority = 1
           }
         ]
@@ -101,24 +101,24 @@ inputs = {
             log_type = "ALERT"
             log_destination_type = "CloudWatchLogs"
             log_destination = {
-              log_group = "/aws/network-firewall/staging/alerts"
+              log_group = "/aws/network-firewall/dev/alerts"
             }
           },
           {
             log_type = "FLOW"
             log_destination_type = "CloudWatchLogs"
             log_destination = {
-              log_group = "/aws/network-firewall/staging/flows"
+              log_group = "/aws/network-firewall/dev/flows"
             }
           }
         ]
       }
       
       tags = {
-        Environment = "Staging"
+        Environment = "Development"
         Purpose     = "Network Firewall"
         Owner       = "Security Team"
-        Compliance  = "SOC2"
+        Compliance  = "Basic"
         DataClassification = "Internal"
       }
     }
@@ -126,30 +126,35 @@ inputs = {
     # Stateful rule groups configuration
     stateful_rule_groups = {
       "domain-list-rule-group" = {
-        rule_group_name = "ClientBStagingDomainList"
+        rule_group_name = "ClientBDevDomainList"
         rule_group_type = "DOMAIN_LIST"
         rules_string = <<EOF
-# Allow trusted domains
+# Allow trusted domains for development
 PASS $HOME_NET any -> $EXTERNAL_NET any (msg:"Allow trusted domains"; sid:1001; rev:1;)
 PASS $HOME_NET any -> $EXTERNAL_NET any (msg:"Allow AWS services"; sid:1002; rev:1;)
+PASS $HOME_NET any -> $EXTERNAL_NET any (msg:"Allow development tools"; sid:1003; rev:1;)
 EOF
         tags = {
-          Environment = "Staging"
+          Environment = "Development"
           Purpose     = "Domain List Rules"
           Owner       = "Security Team"
         }
       }
       
       "suricata-rule-group" = {
-        rule_group_name = "ClientBStagingSuricataRules"
+        rule_group_name = "ClientBDevSuricataRules"
         rule_group_type = "STATEFUL"
         rules_string = <<EOF
-# Basic security rules for staging
+# Basic security rules for development (lenient)
 alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"Suspicious outbound connection"; sid:2001; rev:1;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"Suspicious inbound connection"; sid:2002; rev:1;)
+# Allow development traffic
+PASS tcp $HOME_NET any -> $EXTERNAL_NET 22 (msg:"Allow SSH for development"; sid:2003; rev:1;)
+PASS tcp $HOME_NET any -> $EXTERNAL_NET 80 (msg:"Allow HTTP for development"; sid:2004; rev:1;)
+PASS tcp $HOME_NET any -> $EXTERNAL_NET 443 (msg:"Allow HTTPS for development"; sid:2005; rev:1;)
 EOF
         tags = {
-          Environment = "Staging"
+          Environment = "Development"
           Purpose     = "Suricata Rules"
           Owner       = "Security Team"
         }
@@ -159,7 +164,7 @@ EOF
     # Stateless rule groups configuration
     stateless_rule_groups = {
       "custom-stateless-rules" = {
-        rule_group_name = "ClientBStagingCustomStateless"
+        rule_group_name = "ClientBDevCustomStateless"
         rules = [
           {
             priority = 1
@@ -167,7 +172,7 @@ EOF
               match_attributes = {
                 protocols = [6]  # TCP
                 source = {
-                  address_definition = "10.3.0.0/16"
+                  address_definition = "10.1.0.0/16"
                 }
                 destination = {
                   address_definition = "0.0.0.0/0"
@@ -180,6 +185,14 @@ EOF
                   {
                     from_port = 443
                     to_port = 443
+                  },
+                  {
+                    from_port = 22
+                    to_port = 22
+                  },
+                  {
+                    from_port = 8080
+                    to_port = 8080
                   }
                 ]
               }
@@ -188,7 +201,7 @@ EOF
           }
         ]
         tags = {
-          Environment = "Staging"
+          Environment = "Development"
           Purpose     = "Custom Stateless Rules"
           Owner       = "Security Team"
         }
@@ -199,23 +212,23 @@ EOF
     cloudwatch_logs = {
       enabled = true
       log_groups = {
-        "network-firewall-alerts-staging" = {
-          name = "/aws/network-firewall/staging/alerts"
-          retention_in_days = 30
+        "network-firewall-alerts-dev" = {
+          name = "/aws/network-firewall/dev/alerts"
+          retention_in_days = 7
           kms_key_id = null
           tags = {
-            Environment = "Staging"
+            Environment = "Development"
             Purpose     = "Network Firewall Alerts"
             Owner       = "Security Team"
           }
         }
         
-        "network-firewall-flows-staging" = {
-          name = "/aws/network-firewall/staging/flows"
-          retention_in_days = 30
+        "network-firewall-flows-dev" = {
+          name = "/aws/network-firewall/dev/flows"
+          retention_in_days = 7
           kms_key_id = null
           tags = {
-            Environment = "Staging"
+            Environment = "Development"
             Purpose     = "Network Firewall Flows"
             Owner       = "Security Team"
           }
@@ -227,39 +240,39 @@ EOF
     cloudwatch_alarms = {
       enabled = true
       alarms = {
-        "network-firewall-alerts-staging" = {
-          alarm_name = "NetworkFirewallAlertsStaging"
+        "network-firewall-alerts-dev" = {
+          alarm_name = "NetworkFirewallAlertsDev"
           comparison_operator = "GreaterThanThreshold"
           evaluation_periods = 1
           metric_name = "AlertCount"
           namespace = "AWS/NetworkFirewall"
           period = 300
           statistic = "Sum"
-          threshold = 10
-          alarm_description = "High number of network firewall alerts in staging"
-          alarm_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-staging"]
-          ok_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-staging"]
+          threshold = 50
+          alarm_description = "High number of network firewall alerts in development"
+          alarm_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-dev"]
+          ok_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-dev"]
           tags = {
-            Environment = "Staging"
+            Environment = "Development"
             Purpose     = "Network Firewall Monitoring"
             Owner       = "Security Team"
           }
         }
         
-        "network-firewall-dropped-packets-staging" = {
-          alarm_name = "NetworkFirewallDroppedPacketsStaging"
+        "network-firewall-dropped-packets-dev" = {
+          alarm_name = "NetworkFirewallDroppedPacketsDev"
           comparison_operator = "GreaterThanThreshold"
           evaluation_periods = 1
           metric_name = "DropCount"
           namespace = "AWS/NetworkFirewall"
           period = 300
           statistic = "Sum"
-          threshold = 100
-          alarm_description = "High number of dropped packets by network firewall in staging"
-          alarm_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-staging"]
-          ok_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-staging"]
+          threshold = 500
+          alarm_description = "High number of dropped packets by network firewall in development"
+          alarm_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-dev"]
+          ok_actions = ["arn:aws:sns:eu-west-1:987654321098:client-b-security-dev"]
           tags = {
-            Environment = "Staging"
+            Environment = "Development"
             Purpose     = "Network Firewall Monitoring"
             Owner       = "Security Team"
           }
@@ -269,8 +282,8 @@ EOF
     
     # IAM roles and policies
     iam_config = {
-      firewall_role_name = "ClientBStagingNetworkFirewallRole"
-      logging_role_name = "ClientBStagingNetworkFirewallLoggingRole"
+      firewall_role_name = "ClientBDevNetworkFirewallRole"
+      logging_role_name = "ClientBDevNetworkFirewallLoggingRole"
       
       # Firewall role policies
       firewall_role_policies = [
@@ -283,7 +296,7 @@ EOF
       ]
       
       tags = {
-        Environment = "Staging"
+        Environment = "Development"
         Purpose     = "Network Firewall IAM"
         Owner       = "Security Team"
       }
@@ -292,7 +305,7 @@ EOF
     # Route table configuration
     route_tables = {
       "firewall-route-table" = {
-        route_table_name = "ClientBStagingFirewallRouteTable"
+        route_table_name = "ClientBDevFirewallRouteTable"
         vpc_id = dependency.vpc.outputs.vpc_id
         
         routes = [
@@ -304,7 +317,7 @@ EOF
         ]
         
         tags = {
-          Environment = "Staging"
+          Environment = "Development"
           Purpose     = "Firewall Route Table"
           Owner       = "Security Team"
         }
@@ -314,8 +327,8 @@ EOF
     # Security groups configuration
     security_groups = {
       "firewall-security-group" = {
-        name = "ClientBStagingFirewallSecurityGroup"
-        description = "Security group for Network Firewall in staging environment"
+        name = "ClientBDevFirewallSecurityGroup"
+        description = "Security group for Network Firewall in development environment"
         vpc_id = dependency.vpc.outputs.vpc_id
         
         ingress_rules = [
@@ -323,15 +336,29 @@ EOF
             from_port = 80
             to_port = 80
             protocol = "tcp"
-            cidr_blocks = ["10.3.0.0/16"]
+            cidr_blocks = ["10.1.0.0/16"]
             description = "Allow HTTP from VPC"
           },
           {
             from_port = 443
             to_port = 443
             protocol = "tcp"
-            cidr_blocks = ["10.3.0.0/16"]
+            cidr_blocks = ["10.1.0.0/16"]
             description = "Allow HTTPS from VPC"
+          },
+          {
+            from_port = 22
+            to_port = 22
+            protocol = "tcp"
+            cidr_blocks = ["10.1.0.0/16"]
+            description = "Allow SSH from VPC"
+          },
+          {
+            from_port = 8080
+            to_port = 8080
+            protocol = "tcp"
+            cidr_blocks = ["10.1.0.0/16"]
+            description = "Allow development ports from VPC"
           }
         ]
         
@@ -346,7 +373,7 @@ EOF
         ]
         
         tags = {
-          Environment = "Staging"
+          Environment = "Development"
           Purpose     = "Firewall Security Group"
           Owner       = "Security Team"
         }
@@ -363,30 +390,30 @@ EOF
     Owner       = "Security Team"
     ManagedBy   = "Terragrunt"
     Version     = "v1.0.0"
-    Purpose     = "Staging Network Firewall"
+    Purpose     = "Development Network Firewall"
     DataClassification = "Internal"
-    Compliance  = "SOC2"
-    StagingEnvironment = "Yes"
-    BusinessImpact = "Medium"
-    SecurityLevel = "Medium"
+    Compliance  = "Basic"
+    DevelopmentEnvironment = "Yes"
+    BusinessImpact = "Low"
+    SecurityLevel = "Low"
   }
   
-  # Staging specific overrides
-  staging_overrides = {
-    # Network firewall configuration for staging (moderate security)
-    enable_comprehensive_firewall = true
-    enable_intrusion_prevention = true
+  # Development specific overrides
+  dev_overrides = {
+    # Network firewall configuration for development (basic security)
+    enable_comprehensive_firewall = false
+    enable_intrusion_prevention = false
     enable_intrusion_detection = true
     enable_ssl_inspection = false
-    enable_threat_intelligence = true
+    enable_threat_intelligence = false
     
-    # Firewall policy settings for staging
+    # Firewall policy settings for development
     firewall_policy_settings = {
       stateless_default_actions = ["aws:forward_to_sfe"]
       stateless_fragment_default_actions = ["aws:forward_to_sfe"]
       stateful_default_actions = ["aws:alert_strict"]
       
-      # Rule priorities for staging
+      # Rule priorities for development
       rule_priorities = {
         domain_list_priority = 1
         suricata_rules_priority = 2
@@ -394,20 +421,20 @@ EOF
       }
     }
     
-    # Logging configuration for staging
+    # Logging configuration for development
     logging_config = {
       enable_alert_logging = true
-      enable_flow_logging = true
+      enable_flow_logging = false
       enable_ssl_logging = false
       
-      # Log retention for staging
+      # Log retention for development
       log_retention = {
-        alert_logs_days = 30
-        flow_logs_days = 30
+        alert_logs_days = 7
+        flow_logs_days = 0
         ssl_logs_days = 0
       }
       
-      # Log destinations for staging
+      # Log destinations for development
       log_destinations = {
         cloudwatch_logs = true
         s3_bucket = false
@@ -415,64 +442,64 @@ EOF
       }
     }
     
-    # Monitoring and alerting for staging
+    # Monitoring and alerting for development
     monitoring_config = {
       enable_cloudwatch_alarms = true
-      enable_cloudwatch_dashboards = true
+      enable_cloudwatch_dashboards = false
       enable_sns_notifications = true
       
-      # Alert thresholds for staging
+      # Alert thresholds for development (lenient)
       alert_thresholds = {
-        alert_count_threshold = 10
-        dropped_packets_threshold = 100
-        blocked_connections_threshold = 50
+        alert_count_threshold = 50
+        dropped_packets_threshold = 500
+        blocked_connections_threshold = 200
       }
       
-      # Notification channels for staging
+      # Notification channels for development
       notification_channels = {
-        email = ["security@client-b.com"]
+        email = ["devops@client-b.com"]
         slack = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
         pagerduty = null
       }
     }
     
-    # Performance configuration for staging
+    # Performance configuration for development
     performance_config = {
       firewall_capacity = "CAPACITY_100"
       enable_auto_scaling = false
       enable_load_balancing = false
       
-      # Performance thresholds for staging
+      # Performance thresholds for development
       performance_thresholds = {
-        max_connections = 10000
-        max_throughput = 1000  # Mbps
-        max_packets_per_second = 10000
+        max_connections = 5000
+        max_throughput = 500  # Mbps
+        max_packets_per_second = 5000
       }
     }
     
-    # Security configuration for staging
+    # Security configuration for development
     security_config = {
-      enable_domain_filtering = true
+      enable_domain_filtering = false
       enable_url_filtering = false
       enable_file_filtering = false
       enable_ssl_inspection = false
       
-      # Security settings for staging
+      # Security settings for development
       security_settings = {
-        domain_list_update_frequency = "daily"
-        threat_intelligence_update_frequency = "daily"
-        rule_update_frequency = "weekly"
-        enable_automatic_updates = true
+        domain_list_update_frequency = "weekly"
+        threat_intelligence_update_frequency = "weekly"
+        rule_update_frequency = "monthly"
+        enable_automatic_updates = false
       }
     }
     
-    # Compliance configuration for staging
+    # Compliance configuration for development
     compliance_config = {
       enable_audit_logging = false
       enable_compliance_reporting = false
       enable_data_classification = false
       
-      # Compliance settings for staging
+      # Compliance settings for development
       compliance_settings = {
         enable_gdpr_compliance = false
         enable_soc2_compliance = false
@@ -481,18 +508,54 @@ EOF
       }
     }
     
-    # Testing and validation for staging
+    # Testing and validation for development
     testing_config = {
       enable_penetration_testing = false
       enable_vulnerability_scanning = false
       enable_security_assessment = false
       
-      # Testing settings for staging
+      # Testing settings for development
       testing_settings = {
         penetration_test_interval = "never"
         vulnerability_scan_interval = "never"
         security_assessment_interval = "never"
         enable_automated_testing = false
+      }
+    }
+    
+    # Development environment variables
+    environment_variables = {
+      NODE_ENV = "development"
+      DEBUG = "true"
+      LOG_LEVEL = "debug"
+      ENABLE_NETWORK_DEBUGGING = "true"
+      ENABLE_PERFORMANCE_MONITORING = "false"
+      ENABLE_SECURITY_MONITORING = "true"
+      NETWORK_ALERT_ENABLED = "true"
+      COMPLIANCE_MODE = "basic"
+      SECURITY_MODE = "low"
+    }
+    
+    # Development debugging features
+    debugging_features = {
+      enable_network_debugging = true
+      enable_performance_debugging = false
+      enable_security_debugging = true
+      
+      # Debugging configuration
+      debugging_config = {
+        enable_detailed_logging = true
+        enable_metric_debugging = false
+        enable_alert_debugging = true
+        enable_flow_log_debugging = false
+        
+        # Debug settings for development
+        debug_settings = {
+          log_level = "debug"
+          enable_trace_logging = true
+          enable_performance_tracing = false
+          enable_network_tracing = true
+        }
       }
     }
   }
