@@ -22,22 +22,34 @@ terraform {
   source = "git::https://github.com/catherinevee/tfm-aws-ecommerce.git//?ref=v1.0.0"
 }
 
-# Dependencies (uncomment and configure as needed)
-# dependency "vpc" {
-#   config_path = "../vpc"
-# }
-# 
-# dependency "rds" {
-#   config_path = "../rds"
-# }
-# 
-# dependency "elasticache" {
-#   config_path = "../elasticache"
-# }
-# 
-# dependency "alb" {
-#   config_path = "../alb"
-# }
+# Dependencies
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+dependency "rds" {
+  config_path = "../rds"
+}
+
+dependency "elasticache" {
+  config_path = "../elasticache"
+}
+
+dependency "alb" {
+  config_path = "../alb"
+}
+
+dependency "security_groups" {
+  config_path = "../security-groups"
+}
+
+dependency "kms" {
+  config_path = "../kms"
+}
+
+dependency "sns" {
+  config_path = "../sns"
+}
 
 inputs = {
   # Environment and region configuration
@@ -107,98 +119,32 @@ inputs = {
     enable_test_data = true
   }
   
-  # VPC and networking configuration
-  vpc_config = {
-    cidr_block = "10.0.0.0/16"
-    availability_zones = ["eu-west-2a", "eu-west-2b"]
-    
-    public_subnets = {
-      "eu-west-2a" = "10.0.1.0/24"
-      "eu-west-2b" = "10.0.2.0/24"
-    }
-    
-    private_subnets = {
-      "eu-west-2a" = "10.0.10.0/24"
-      "eu-west-2b" = "10.0.11.0/24"
-    }
-    
-    database_subnets = {
-      "eu-west-2a" = "10.0.20.0/24"
-      "eu-west-2b" = "10.0.21.0/24"
-    }
-    
-    elasticache_subnets = {
-      "eu-west-2a" = "10.0.30.0/24"
-      "eu-west-2b" = "10.0.31.0/24"
-    }
-  }
+  # VPC and networking configuration (using dependencies)
+  vpc_id = dependency.vpc.outputs.vpc_id
+  public_subnet_ids = dependency.vpc.outputs.public_subnet_ids
+  private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
+  database_subnet_ids = dependency.vpc.outputs.database_subnet_ids
+  elasticache_subnet_ids = dependency.vpc.outputs.elasticache_subnet_ids
   
-  # Security groups configuration
-  security_groups = {
-    alb_sg = {
-      name = "client-b-ecommerce-dev-alb-sg"
-      description = "Security group for ALB in dev environment"
-      ingress_rules = [
-        {
-          port = 80
-          protocol = "tcp"
-          cidr_blocks = ["0.0.0.0/0"]
-          description = "HTTP access"
-        },
-        {
-          port = 443
-          protocol = "tcp"
-          cidr_blocks = ["0.0.0.0/0"]
-          description = "HTTPS access"
-        }
-      ]
-    }
-    
-    app_sg = {
-      name = "client-b-ecommerce-dev-app-sg"
-      description = "Security group for application servers in dev environment"
-      ingress_rules = [
-        {
-          port = 80
-          protocol = "tcp"
-          source_security_group_id = "sg-alb-dev-id"  # Replace with actual ALB SG ID
-          description = "HTTP from ALB"
-        },
-        {
-          port = 22
-          protocol = "tcp"
-          cidr_blocks = ["10.0.0.0/16"]
-          description = "SSH from VPC"
-        }
-      ]
-    }
-    
-    db_sg = {
-      name = "client-b-ecommerce-dev-db-sg"
-      description = "Security group for database in dev environment"
-      ingress_rules = [
-        {
-          port = 3306
-          protocol = "tcp"
-          source_security_group_id = "sg-app-dev-id"  # Replace with actual App SG ID
-          description = "MySQL from application servers"
-        }
-      ]
-    }
-    
-    cache_sg = {
-      name = "client-b-ecommerce-dev-cache-sg"
-      description = "Security group for ElastiCache in dev environment"
-      ingress_rules = [
-        {
-          port = 6379
-          protocol = "tcp"
-          source_security_group_id = "sg-app-dev-id"  # Replace with actual App SG ID
-          description = "Redis from application servers"
-        }
-      ]
-    }
-  }
+  # Security groups configuration (using dependencies)
+  alb_security_group_id = dependency.security_groups.outputs.security_group_ids["alb-sg"]
+  app_security_group_id = dependency.security_groups.outputs.security_group_ids["app-sg"]
+  db_security_group_id = dependency.security_groups.outputs.security_group_ids["db-sg"]
+  cache_security_group_id = dependency.security_groups.outputs.security_group_ids["cache-sg"]
+  
+  # Database configuration (using dependencies)
+  rds_endpoint = dependency.rds.outputs.db_endpoint
+  rds_port = dependency.rds.outputs.db_port
+  rds_database_name = dependency.rds.outputs.db_name
+  
+  # Cache configuration (using dependencies)
+  elasticache_endpoint = dependency.elasticache.outputs.cache_endpoint
+  elasticache_port = dependency.elasticache.outputs.cache_port
+  
+  # Load balancer configuration (using dependencies)
+  alb_dns_name = dependency.alb.outputs.load_balancer_dns_name
+  alb_zone_id = dependency.alb.outputs.load_balancer_zone_id
+  target_group_arn = dependency.alb.outputs.target_group_arn
   
   # Tags for resource management
   tags = {
