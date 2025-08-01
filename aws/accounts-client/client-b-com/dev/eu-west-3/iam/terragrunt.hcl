@@ -22,14 +22,18 @@ terraform {
   source = "git::https://github.com/catherinevee/iam.git//?ref=v1.0.0"
 }
 
-# Dependencies (uncomment and configure as needed)
-# dependency "vpc" {
-#   config_path = "../network"
-# }
-# 
-# dependency "s3" {
-#   config_path = "../storage"
-# }
+# Dependencies
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+dependency "kms" {
+  config_path = "../kms"
+}
+
+dependency "sns" {
+  config_path = "../sns"
+}
 
 inputs = {
   # Environment and region configuration
