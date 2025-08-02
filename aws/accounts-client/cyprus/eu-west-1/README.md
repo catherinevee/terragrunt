@@ -26,6 +26,157 @@ ECS Service (Private Subnets)
 RDS Database (Database Subnets)
 ```
 
+## 📋 Resource Map
+
+### **AWS Resources Created by Module**
+
+| Module | AWS Resources | Resource Names | Purpose |
+|--------|---------------|----------------|---------|
+| **VPC** | VPC, Subnets, Route Tables, NAT Gateway, Internet Gateway | `cyprus-vpc`, `cyprus-vpc-public-*`, `cyprus-vpc-private-*`, `cyprus-vpc-database-*` | Network foundation |
+| **S3** | S3 Bucket, Bucket Policy | `cyprus-accounts-client-{account-id}` | Data storage |
+| **IAM** | IAM Roles, IAM Policies | `cyprus-ecs-task-execution-role`, `cyprus-ecs-task-role`, `cyprus-ecs-task-policy` | Service permissions |
+| **RDS** | RDS Instance, Security Group, IAM Role, Parameter Group | `cyprus-accounts-client`, `cyprus-rds-sg`, `cyprus-rds-monitoring-role` | Database layer |
+| **ALB** | Application Load Balancer, Target Group, Security Group, Listener | `cyprus-alb`, `cyprus-alb-sg`, `cyprus-alb-tg` | Load balancing |
+| **ECS Cluster** | ECS Cluster, Capacity Providers | `cyprus-cluster` | Container orchestration |
+| **ECS Service** | ECS Service, Task Definition, Security Group, Log Group | `accounts-client-service`, `cyprus-ecs-sg`, `/ecs/accounts-client-service` | Application deployment |
+| **CloudWatch** | Log Groups, Metric Alarms, Dashboard | `/aws/cyprus/accounts-client`, `cyprus-ecs-cpu-high`, `cyprus-accounts-client-dashboard` | Monitoring & alerting |
+
+### **Detailed Resource Breakdown**
+
+#### **🔗 VPC Module Resources**
+```
+VPC: cyprus-vpc (10.0.0.0/16)
+├── Public Subnets (3 AZs)
+│   ├── eu-west-1a: 10.0.1.0/24
+│   ├── eu-west-1b: 10.0.2.0/24
+│   └── eu-west-1c: 10.0.3.0/24
+├── Private Subnets (3 AZs)
+│   ├── eu-west-1a: 10.0.11.0/24
+│   ├── eu-west-1b: 10.0.12.0/24
+│   └── eu-west-1c: 10.0.13.0/24
+├── Database Subnets (3 AZs)
+│   ├── eu-west-1a: 10.0.21.0/24
+│   ├── eu-west-1b: 10.0.22.0/24
+│   └── eu-west-1c: 10.0.23.0/24
+├── NAT Gateways (3)
+├── Internet Gateway
+├── Route Tables (4)
+└── VPC Flow Logs
+```
+
+#### **🗄️ S3 Module Resources**
+```
+S3 Bucket: cyprus-accounts-client-{account-id}
+├── Versioning: Enabled
+├── Encryption: AES256
+├── Public Access: Blocked
+└── Lifecycle Rules:
+    ├── 30 days → STANDARD_IA
+    ├── 90 days → GLACIER
+    └── 365 days → DEEP_ARCHIVE
+```
+
+#### **🔐 IAM Module Resources**
+```
+IAM Roles:
+├── cyprus-ecs-task-execution-role
+│   ├── AmazonECSTaskExecutionRolePolicy
+│   ├── S3 Access Policy
+│   └── Secrets Manager Access Policy
+└── cyprus-ecs-task-role
+    ├── S3 Access Policy
+    ├── Secrets Manager Access Policy
+    └── CloudWatch Logs Policy
+```
+
+#### **🗃️ RDS Module Resources**
+```
+RDS Instance: cyprus-accounts-client
+├── Engine: PostgreSQL 15.5
+├── Instance: db.t3.micro
+├── Storage: 20GB (encrypted)
+├── Backup: 7 days retention
+├── Security Group: cyprus-rds-sg
+├── Monitoring Role: cyprus-rds-monitoring-role
+└── Performance Insights: Enabled
+```
+
+#### **⚖️ ALB Module Resources**
+```
+Application Load Balancer: cyprus-alb
+├── Type: Application Load Balancer
+├── Scheme: Internet-facing
+├── Security Group: cyprus-alb-sg
+├── Target Group: cyprus-alb-tg
+├── Listeners:
+│   ├── HTTP (80) → HTTPS redirect
+│   └── HTTPS (443) → Target Group
+└── Health Check: /health (8080)
+```
+
+#### **🐳 ECS Cluster Module Resources**
+```
+ECS Cluster: cyprus-cluster
+├── Capacity Providers:
+│   ├── FARGATE
+│   └── FARGATE_SPOT
+├── Container Insights: Enabled
+└── Cluster Settings: Configured
+```
+
+#### **🚀 ECS Service Module Resources**
+```
+ECS Service: accounts-client-service
+├── Task Definition: accounts-client
+├── CPU: 256
+├── Memory: 512MB
+├── Desired Count: 2
+├── Security Group: cyprus-ecs-sg
+├── Log Group: /ecs/accounts-client-service
+├── Auto Scaling: Enabled
+└── Load Balancer Integration: ALB
+```
+
+#### **📊 CloudWatch Module Resources**
+```
+CloudWatch Resources:
+├── Log Group: /aws/cyprus/accounts-client
+├── Metric Alarms:
+│   ├── cyprus-ecs-cpu-high (80% threshold)
+│   ├── cyprus-ecs-memory-high (80% threshold)
+│   └── cyprus-rds-cpu-high (80% threshold)
+└── Dashboard: cyprus-accounts-client-dashboard
+    ├── ECS Service Metrics
+    └── RDS Database Metrics
+```
+
+### **🔗 Resource Dependencies**
+
+```
+VPC (Foundation)
+├── S3 (Independent)
+├── IAM (Independent)
+├── RDS (Depends on VPC)
+├── ALB (Depends on VPC)
+├── ECS Cluster (Independent)
+├── ECS Service (Depends on VPC, ALB, ECS Cluster, RDS)
+└── CloudWatch (Independent)
+```
+
+### **💰 Estimated Monthly Costs**
+
+| Service | Resource | Estimated Cost |
+|---------|----------|----------------|
+| **VPC** | NAT Gateways (3) | ~$45 |
+| **RDS** | db.t3.micro | ~$15 |
+| **ECS** | Fargate (2 tasks) | ~$30 |
+| **ALB** | Application Load Balancer | ~$20 |
+| **S3** | Storage + requests | ~$5 |
+| **CloudWatch** | Logs + metrics | ~$10 |
+| **Total** | | **~$125/month** |
+
+*Note: Costs are estimates and may vary based on usage patterns.*
+
 ## 📁 Directory Structure
 
 ```
