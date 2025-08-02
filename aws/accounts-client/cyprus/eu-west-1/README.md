@@ -31,10 +31,10 @@ RDS Database (Database Subnets)
 ```
 eu-west-1/
 ├── root.hcl                 # Root configuration
-├── account.hcl              # Account-specific variables
 ├── region.hcl               # Region-specific variables
 ├── deploy.ps1               # Deployment script
 ├── README.md                # This file
+├── .gitignore               # Git ignore rules
 ├── vpc/                     # VPC and networking
 │   └── terragrunt.hcl
 ├── s3/                      # S3 buckets
@@ -52,6 +52,8 @@ eu-west-1/
 └── cloudwatch/              # Monitoring and alerting
     └── terragrunt.hcl
 ```
+
+**Note**: This structure follows the "split state by service boundaries" best practice, with separate modules for the ECS cluster and service.
 
 ## 🚀 Quick Start
 
@@ -79,13 +81,13 @@ eu-west-1/
 ### Configuration
 
 1. **Update Account Configuration**
-   Edit `account.hcl` and update:
+   Edit `../account.hcl` and update:
    - `aws_account_id`: Your AWS account ID
    - `aws_account_role`: IAM role ARN for Terragrunt
    - `company`: Your company name
 
 2. **Update Region Configuration**
-   Edit `region.hcl` if you need to change the region (default: eu-west-1)
+   Edit `../region.hcl` if you need to change the region (default: eu-west-1)
 
 ### Deployment
 
@@ -152,9 +154,8 @@ cd cloudwatch && terragrunt apply && cd ..
 - **Source**: `terraform-aws-modules/ecs/aws`
 - **Version**: 5.7.4
 - **Features**:
-  - Fargate cluster with Container Insights
-  - Auto-scaling capabilities
-  - Load balancer integration
+  - **ecs-cluster**: Fargate cluster with Container Insights
+  - **ecs-service**: Auto-scaling capabilities with load balancer integration
   - CloudWatch logging
   - Secrets management integration
 
@@ -276,6 +277,7 @@ aws rds describe-db-instances --db-instance-identifier cyprus-accounts-client
 - **Dependencies**: Modules have proper dependency management
 - **Tags**: All resources tagged for cost allocation and management
 - **Compliance**: Infrastructure follows AWS best practices
+- **Input Validation**: Comprehensive validation implemented for all modules
 
 ## 🤝 Contributing
 

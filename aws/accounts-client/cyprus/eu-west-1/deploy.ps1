@@ -122,7 +122,7 @@ if (-not (Test-AWSConfig)) {
     exit 1
 }
 
-# Define module deployment order
+# Define module deployment order (cleaned up - no unused modules)
 $Modules = @(
     "vpc",
     "s3", 
