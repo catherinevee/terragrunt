@@ -12,18 +12,33 @@ include "region" {
   expose = true
 }
 
+
 terraform {
-  source = "../../../../modules/ec2"
+  source = "git::https://github.com/catherinevee/terraform-aws-ec2.git//modules/ec2?ref=main"
+}
+
+dependency "vpc" {
+  config_path = "../../network/vpc"
 }
 dependency "securitygroup" {
-  config_path = "../../../../modules/securitygroup"
+  config_path = "../../network/securitygroup"
 }
-dependency "vpc" {
-  config_path = "../../../../modules/vpc"
+dependency "subnet" {
+  config_path = "../../network/subnet"
 }
+
 
 
 inputs = {
-  s = dependency.compute.locals.instance_type
-  vpc_id = dependency.vpc.outputs.vpc_id
+  name                  = "example-ec2-instance"
+  instance_type         = "t3.micro"
+  ami_id                = "ami-1234567890abcdef0"
+  subnet_id             = dependency.subnet.outputs.subnet_id
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  vpc_security_group_ids = [dependency.securitygroup.outputs.security_group_id]
+  key_name              = "your-key-name"
+  tags = {
+    Environment = "dev"
+    Project     = "client-a-com"
+  }
 }
