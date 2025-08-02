@@ -4,6 +4,13 @@ include "root" {
 
 locals {
   account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
+  
+  # Input validation for IAM module
+  validate_role_name_length = length("cyprus-ecs-task-execution-role") <= 64 ? null : file("ERROR: IAM role name must be <= 64 characters")
+  validate_role_name_format = can(regex("^[a-zA-Z0-9+=,.@_-]+$", "cyprus-ecs-task-execution-role")) ? null : file("ERROR: IAM role name must contain only alphanumeric characters and special characters: +=,.@_-")
+  validate_role_name_no_prefix = !can(regex("^AWS", "cyprus-ecs-task-execution-role")) ? null : file("ERROR: IAM role name cannot start with 'AWS'")
+  validate_policy_name_length = length("cyprus-ecs-task-policy") <= 128 ? null : file("ERROR: IAM policy name must be <= 128 characters")
+  validate_policy_name_format = can(regex("^[a-zA-Z0-9+=,.@_-]+$", "cyprus-ecs-task-policy")) ? null : file("ERROR: IAM policy name must contain only alphanumeric characters and special characters: +=,.@_-")
 }
 
 terraform {
@@ -58,6 +65,7 @@ inputs = {
     Environment = "cyprus"
     Project     = "accounts-client"
     ManagedBy   = "Terragrunt"
+    Purpose     = "task-execution"
   }
 }
 
@@ -82,6 +90,7 @@ resource "aws_iam_role" "ecs_task_role" {
     Environment = "cyprus"
     Project     = "accounts-client"
     ManagedBy   = "Terragrunt"
+    Purpose     = "task-permissions"
   }
 }
 

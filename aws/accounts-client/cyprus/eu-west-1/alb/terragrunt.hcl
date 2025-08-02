@@ -5,6 +5,15 @@ include "root" {
 locals {
   account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
   alb_config   = local.account_vars.locals.alb_config
+  
+  # Input validation for ALB module
+  validate_alb_name = length(local.alb_config.name) <= 32 ? null : file("ERROR: ALB name must be <= 32 characters")
+  validate_alb_name_format = can(regex("^[a-zA-Z0-9-]+$", local.alb_config.name)) ? null : file("ERROR: ALB name must contain only alphanumeric characters and hyphens")
+  validate_alb_type = contains(["application", "network"], local.alb_config.load_balancer_type) ? null : file("ERROR: Load balancer type must be 'application' or 'network'")
+  validate_certificate_arn = can(regex("^arn:aws:acm:[a-z0-9-]+:[0-9]{12}:certificate/", local.alb_config.certificate_arn)) ? null : file("ERROR: Invalid certificate ARN format")
+  validate_health_check_path = length(local.alb_config.health_check_path) > 0 ? null : file("ERROR: Health check path cannot be empty")
+  validate_health_check_path_format = can(regex("^/", local.alb_config.health_check_path)) ? null : file("ERROR: Health check path must start with /")
+  validate_health_check_port = local.alb_config.health_check_port >= 1 && local.alb_config.health_check_port <= 65535 ? null : file("ERROR: Health check port must be between 1 and 65535")
 }
 
 dependency "vpc" {
@@ -38,13 +47,13 @@ inputs = {
     accounts_client = {
       name_prefix      = "ac-"
       backend_protocol = "HTTP"
-      backend_port     = 8080
+      backend_port     = local.alb_config.health_check_port
       target_type      = "ip"
       
       health_check = {
         enabled             = true
         interval            = 30
-        path                = "/health"
+        path                = local.alb_config.health_check_path
         port                = "traffic-port"
         healthy_threshold   = 3
         unhealthy_threshold = 3
@@ -70,7 +79,7 @@ inputs = {
     {
       port               = 443
       protocol           = "HTTPS"
-      certificate_arn    = "arn:aws:acm:eu-west-1:123456789012:certificate/mock-cert"  # Replace with actual certificate ARN
+      certificate_arn    = local.alb_config.certificate_arn
       target_group_index = 0
       action_type        = "forward"
     }
@@ -95,6 +104,7 @@ inputs = {
     Environment = "cyprus"
     Project     = "accounts-client"
     ManagedBy   = "Terragrunt"
+    Purpose     = "load-balancing"
   }
 }
 
@@ -128,5 +138,6 @@ resource "aws_security_group" "alb" {
     Name        = "cyprus-alb-sg"
     Environment = "cyprus"
     Project     = "accounts-client"
+    Purpose     = "load-balancer-access"
   }
 } 

@@ -5,6 +5,18 @@ include "root" {
 locals {
   account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
   ecs_config   = local.account_vars.locals.ecs_config
+  
+  # Input validation for ECS service module
+  validate_service_name = length(local.ecs_config.service_name) <= 255 ? null : file("ERROR: ECS service name must be <= 255 characters")
+  validate_service_name_format = can(regex("^[a-zA-Z0-9_-]+$", local.ecs_config.service_name)) ? null : file("ERROR: ECS service name must contain only alphanumeric characters, hyphens, and underscores")
+  validate_ecs_cpu = contains([256, 512, 1024, 2048, 4096], local.ecs_config.cpu) ? null : file("ERROR: ECS CPU must be one of: 256, 512, 1024, 2048, 4096")
+  validate_ecs_memory = contains([512, 1024, 2048, 4096, 8192, 16384, 30720], local.ecs_config.memory) ? null : file("ERROR: ECS memory must be one of: 512, 1024, 2048, 4096, 8192, 16384, 30720")
+  validate_ecs_desired_count = local.ecs_config.desired_count >= 1 && local.ecs_config.desired_count <= 10 ? null : file("ERROR: ECS desired count must be between 1 and 10")
+  validate_ecs_max_count = local.ecs_config.max_count >= local.ecs_config.desired_count ? null : file("ERROR: ECS max count must be >= desired count")
+  validate_ecs_min_count = local.ecs_config.min_count <= local.ecs_config.desired_count ? null : file("ERROR: ECS min count must be <= desired count")
+  validate_ecs_container_port = local.ecs_config.container_port >= 1 && local.ecs_config.container_port <= 65535 ? null : file("ERROR: Container port must be between 1 and 65535")
+  validate_health_check_path = length(local.ecs_config.health_check_path) > 0 ? null : file("ERROR: Health check path cannot be empty")
+  validate_health_check_path_format = can(regex("^/", local.ecs_config.health_check_path)) ? null : file("ERROR: Health check path must start with /")
 }
 
 dependency "vpc" {
@@ -73,7 +85,7 @@ inputs = {
       image = "your-registry/accounts-client:latest"
       portMappings = [
         {
-          containerPort = 8080
+          containerPort = local.ecs_config.container_port
           protocol      = "tcp"
         }
       ]
@@ -121,7 +133,7 @@ inputs = {
     service = {
       target_group_arn = dependency.alb.outputs.target_group_arns[0]
       container_name   = "accounts_client"
-      container_port   = 8080
+      container_port   = local.ecs_config.container_port
     }
   }
   
@@ -145,6 +157,7 @@ inputs = {
     Environment = "cyprus"
     Project     = "accounts-client"
     ManagedBy   = "Terragrunt"
+    Purpose     = "application-service"
   }
 }
 
@@ -154,8 +167,8 @@ resource "aws_security_group" "ecs" {
   vpc_id      = dependency.vpc.outputs.vpc_id
   
   ingress {
-    from_port       = 8080
-    to_port         = 8080
+    from_port       = local.ecs_config.container_port
+    to_port         = local.ecs_config.container_port
     protocol        = "tcp"
     security_groups = [dependency.alb.outputs.security_group_ids[0]]
   }
@@ -171,6 +184,7 @@ resource "aws_security_group" "ecs" {
     Name        = "cyprus-ecs-sg"
     Environment = "cyprus"
     Project     = "accounts-client"
+    Purpose     = "application-access"
   }
 }
 
@@ -182,5 +196,6 @@ resource "aws_cloudwatch_log_group" "ecs" {
   tags = {
     Environment = "cyprus"
     Project     = "accounts-client"
+    Purpose     = "application-logs"
   }
 } 

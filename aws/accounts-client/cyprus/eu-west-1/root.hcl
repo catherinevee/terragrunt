@@ -10,9 +10,12 @@ locals {
   environment    = local.account_vars.locals.environment
   project        = local.account_vars.locals.project
   company        = local.account_vars.locals.company
+  
+  # Validation
+  validate_environment = contains(["dev", "staging", "prod", "cyprus"], local.environment) ? null : file("ERROR: environment must be one of: dev, staging, prod, cyprus")
 }
 
-# Remote state configuration
+# Remote state configuration with encryption
 remote_state {
   backend = "s3"
   config = {
@@ -25,11 +28,13 @@ remote_state {
       Environment = local.environment
       Project     = local.project
       ManagedBy   = "Terragrunt"
+      Purpose     = "terraform-state"
     }
     dynamodb_table_tags = {
       Environment = local.environment
       Project     = local.project
       ManagedBy   = "Terragrunt"
+      Purpose     = "terraform-locks"
     }
   }
   generate = {
@@ -71,13 +76,14 @@ provider "aws" {
       Company     = "${local.company}"
       ManagedBy   = "Terragrunt"
       Terraform   = "true"
+      Owner       = "infrastructure-team"
     }
   }
 }
 EOF
 }
 
-# Global inputs
+# Global inputs with validation
 inputs = {
   aws_region     = local.aws_region
   aws_account_id = local.aws_account_id
@@ -92,5 +98,10 @@ inputs = {
     Company     = local.company
     ManagedBy   = "Terragrunt"
     Terraform   = "true"
+    Owner       = "infrastructure-team"
   }
+  
+  # Performance optimizations
+  terraform_parallelism = 10
+  terraform_log_level   = "INFO"
 } 
