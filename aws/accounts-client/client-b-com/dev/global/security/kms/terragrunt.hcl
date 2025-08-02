@@ -258,11 +258,12 @@ inputs = {
   # Tags for all KMS security resources
   tags = {
     Environment = "Development"
-    Project     = "Client B Infrastructure"
+    Project     = "Ollie Bacterianos Infrastructure"
     ManagedBy   = "Terraform"
     Owner       = "DevOps Team"
     CostCenter  = "Engineering"
     DataClass   = "Internal"
     SecurityLevel = "High"
+    Client      = "Ollie Bacterianos"
   }
 } 

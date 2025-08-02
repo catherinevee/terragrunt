@@ -43,15 +43,16 @@ inputs = {
     # Data residency
     data_residency = "EU"
     
-    # Tags for all security resources
-    tags = {
-      Environment = "Development"
-      Project     = "Client B Infrastructure"
-      ManagedBy   = "Terraform"
-      Owner       = "DevOps Team"
-      CostCenter  = "Engineering"
-      DataClass   = "Internal"
-      SecurityLevel = "High"
-    }
+         # Tags for all security resources
+     tags = {
+       Environment = "Development"
+       Project     = "Ollie Bacterianos Infrastructure"
+       ManagedBy   = "Terraform"
+       Owner       = "DevOps Team"
+       CostCenter  = "Engineering"
+       DataClass   = "Internal"
+       SecurityLevel = "High"
+       Client      = "Ollie Bacterianos"
+     }
   }
 } 
